@@ -16,7 +16,6 @@ import org.pircbotx.cap.EnableCapHandler;
 import org.pircbotx.cap.TLSCapHandler;
 
 import pcl.lc.utils.CommentedProperties;
-import pcl.lc.utils.GoogleSearch;
 
 public class Config {
 
@@ -28,22 +27,14 @@ public class Config {
 	public static String channels = null;
 	public static String ignoredUsersProp = null;
 	public static String commandprefix = null;
-	public static String httpdport = null;
-	public static String httpdEnable = "false";
-	public static String enablehttpd = null;
-	public static String httpdBaseDomain = null;
 	public static String proxyhost = null;
 	public static String proxyport = null;
 	public static String enableTLS = null;
 	public static String enableSSL = null;
-	public static String TwitCKey = null;
-	public static String TwitCSecret = null;
-	public static String TwitToken = null;
-	public static String TwitTSecret = null;
-	public static String googleAPI = null;
-	public static String AzureTextAPI = null;
+	public static String mysqlServer = null;
+	public static String mysqlUser = null;
+	public static String mysqlPass = null;
 	static String adminProps = null;
-	public static String weatherAPI = null;
 	@SuppressWarnings("rawtypes")
 	public static Builder config = new Configuration.Builder();
 	public static CommentedProperties prop = new CommentedProperties();
@@ -83,40 +74,26 @@ public class Config {
 		    if (VERSION.getMajor() == -1) {
 		    	IRCBot.setDebug(true);
 		    }
-			Config.config.setVersion("MichiBot Build# " + VERSION);
+			Config.config.setVersion("Neo LoggerBot Build# " + VERSION);
 			input = new FileInputStream(file);
 			// load a properties file
 			prop.load(input);
 			botConfig.put("server", prop.getProperty("server", "irc.esper.net"));
 			botConfig.put("serverport", prop.getProperty("serverport", "6667"));
 			botConfig.put("serverpass", prop.getProperty("serverpass", ""));
-			botConfig.put("WeatherAPI", prop.getProperty("WeatherAPI", ""));
-			botConfig.put("GoogleAPI", prop.getProperty("GoogleAPI", ""));
-			botConfig.put("AzureTextAPI", prop.getProperty("AzureTextAPI", ""));
-			botConfig.put("WolframAPI", prop.getProperty("WolframAPI", ""));
-			nick = prop.getProperty("nick","LanteaBot");
+			nick = prop.getProperty("nick","Neo");
 			nspass = prop.getProperty("nspass", "");
 			nsaccount = prop.getProperty("nsaccount", "");
 			ignoredUsersProp = prop.getProperty("ignoredUsers", "");
 			commandprefix = prop.getProperty("commandprefix", "@");
-			enablehttpd = prop.getProperty("enablehttpd", "true");
-			httpdport = prop.getProperty("httpdport", "8081");
-			httpdEnable = prop.getProperty("httpdEnable", "false");
-			httpdBaseDomain = prop.getProperty("httpdBaseDomain", "http://localhost");
-			botConfig.put("httpDocRoot", prop.getProperty("httpDocRoot", ""));
-			botConfig.put("wikiWatcherURL", prop.getProperty("wikiWatcherURL", ""));
 			proxyhost = prop.getProperty("proxyhost", "");
 			proxyport = prop.getProperty("proxyport", "");
 			adminProps = prop.getProperty("admins", "");
 			enableTLS = prop.getProperty("enableTLS", "false");
 			enableSSL = prop.getProperty("enableSSL", "false");
-			TwitCKey = prop.getProperty("TwitCKey");
-			TwitCSecret = prop.getProperty("TwitCSecret");
-			TwitToken = prop.getProperty("TwitToken");
-			TwitTSecret = prop.getProperty("TwitTSecret");
-			googleAPI = prop.getProperty("GoogleAPI", "");
-			AzureTextAPI = prop.getProperty("AzureTextAPI", "");
-			weatherAPI = prop.getProperty("WeatherAPI", "");
+			mysqlServer = prop.getProperty("mysqlServer", "");
+			mysqlUser = prop.getProperty("mysqlUser", "");
+			mysqlPass = prop.getProperty("mysqlPass", "");
 			
 			saveProps();
 
@@ -135,8 +112,6 @@ public class Config {
 			if (!Config.nspass.isEmpty())
 				Config.config.setNickservPassword(Config.nspass);
 
-			if (!Config.googleAPI.isEmpty())
-				GoogleSearch.setup(Config.googleAPI);
 
 			Config.config.addCapHandler(new EnableCapHandler("extended-join", true));
 			Config.config.addCapHandler(new EnableCapHandler("account-notify", true));
@@ -165,22 +140,4 @@ public class Config {
 			}
 		}
 	}
-
-	public static String getTwitCKey() {
-		return TwitCKey;
-	}
-
-	public static String getTwitCSecret() {
-		return TwitCSecret;
-	}
-
-	public static String getTwitToken() {
-		return TwitToken;
-	}
-
-	public static String getTwitTSecret() {
-		return TwitTSecret;
-	}
-
-
 }

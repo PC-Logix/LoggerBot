@@ -17,7 +17,6 @@ import org.pircbotx.hooks.events.WhoisEvent;
 import org.pircbotx.hooks.types.GenericMessageEvent;
 
 import pcl.lc.irc.IRCBot;
-import pcl.lc.irc.Permissions;
 
 public class Account {
 	public static Map<UUID,ExpiringToken> userCache = new HashMap<>();
@@ -161,10 +160,5 @@ public class Account {
 
 			return user;
 		}
-	}
-	
-	@Deprecated
-	public static boolean isOp(PircBotX sourceBot, User user) {
-		return Permissions.isOp(sourceBot, user);
-	}  
+	} 
 }

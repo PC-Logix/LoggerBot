@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,17 +21,16 @@ import org.pircbotx.PircBotX;
 import org.pircbotx.User;
 import org.pircbotx.hooks.Listener;
 import org.pircbotx.hooks.ListenerAdapter;
+import org.pircbotx.hooks.WaitForQueue;
+import org.pircbotx.hooks.events.WhoisEvent;
 import org.reflections.Reflections;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import com.wolfram.alpha.WAEngine;
 
-import pcl.lc.httpd.httpd;
-import pcl.lc.irc.job.TaskScheduler;
-import pcl.lc.irc.job.WikiChangeWatcher;
+import pcl.lc.utils.Account;
+import pcl.lc.utils.Account.ExpiringToken;
 import pcl.lc.utils.Database;
-import pcl.lc.utils.Helper;
-import pcl.lc.utils.InputThread;
 
 public class IRCBot {
 
@@ -65,9 +65,6 @@ public class IRCBot {
 	public static final Logger log = LoggerFactory.getLogger(IRCBot.class);
 
 	public static PircBotX bot;
-	private TaskScheduler scheduler;
-
-	public static httpd httpServer = new httpd();
 	public static boolean isIgnored(String nick) {
 		if (IRCBot.admins.containsKey(nick)) {
 			return false;
@@ -81,64 +78,11 @@ public class IRCBot {
 	public static String getOurNick() {
 		return ournick;
 	}
-	
-	public static HashMap<String, Command> commands = new LinkedHashMap<>();
-	public static HashMap<String, String> helpList = new LinkedHashMap<String, String>();
-
-	public static void registerCommand(Command command) {
-		registerCommand(command, command.getHelpText());
-	}
-
-	public static void registerCommand(Command command, String help) {
-		if (!commands.containsKey(command.getCommand())) {
-			commands.put(command.getCommand(), command);
-			helpList.put(command.getCommand(), help);
-			log.info("Registering Command: " + command.getCommand());
-		} else {
-			log.error("Attempted to register duplicate command! Command: " + command.getCommand() + " Duplicating class: " + command.getClassName() + " Owning class " + commands.get(command.getCommand()).getClassName());
-		}
-	}
-
-	public static void setHelp(String command, String help) {
-		if (helpList.containsKey(command)) {
-			helpList.put(command, help);
-		} else {
-			log.error("Attempted to set help on non existent command");
-		}
-	}
-	
-	public static void registerCommand(String command, String help) {
-		registerCommand(command, help, 0);
-	}
-
-	/**
-	 * Registers a command for output in %help
-	 * @param command String
-	 * @param help String
-	 * @param rateLimit Integer
-	 */
-	public static void registerCommand(String command, String help, Integer rateLimit) {
-		if (!commands.containsKey(command)) {
-			commands.put(command, new Command(command, Thread.currentThread().getStackTrace()[2].getClassName(), rateLimit, false, true, null));
-			helpList.put(command, help);	
-			log.info("Registering Command: " + command);
-		} else {
-			log.error("Attempted to register duplicate command! Command: " + command + " Duplicating class: " + Thread.currentThread().getStackTrace()[2].getClassName() + " Owning class " + commands.get(command));
-		}
-	}
-
-	public static void unregisterCommand(String command) {
-		if (commands.containsKey(command)) {
-			commands.remove(command);
-			log.info("Removing Command: " + command);
-		}
-	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public IRCBot() {
 		scanner = new Scanner(System.in);
-		instance = this;	
-		Helper.init();
+		instance = this;
 		Config.setConfig();	
 		try {
 			Class.forName("org.sqlite.JDBC");
@@ -156,64 +100,12 @@ public class IRCBot {
 			e1.printStackTrace();
 		}
 
-		if(Config.httpdEnable.equals("true")) {
-			try {
-				httpd.setBaseDomain(Config.httpdBaseDomain);
-				
-				httpd.setup();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		//Load all classes in the pcl.lc.irc.hooks package.
-		Reflections plugins = new Reflections("pcl.lc.irc.hooks");
-		Set<Class<? extends ListenerAdapter>> allClasses = plugins.getSubTypesOf(ListenerAdapter.class);
-		for (Class<? extends Object> s : allClasses) {
-			try {
-				log.info("[DEPRECIATED] Loading " + s.getCanonicalName());
-				Config.config.addListener((Listener) s.newInstance());
-			} catch (InstantiationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		Reflections plugins2 = new Reflections("pcl.lc.irc.hooks");
-		Set<Class<? extends AbstractListener>> allClasses2 = plugins2.getSubTypesOf(AbstractListener.class);
-		for (Class<? extends Object> s : allClasses2) {
-			try {
-				log.info("Loading " + s.getCanonicalName());
-				Config.config.addListener((Listener) s.newInstance());
-			} catch (InstantiationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
 		loadOps();
 		loadChannels();
 		//Database.setDBVer(Database.DB_VER);
 		Database.updateDatabase();
 		try {
-			if(!Config.botConfig.get("wikiWatcherURL").equals("")) {
-				WikiChangeWatcher WikiChange = new WikiChangeWatcher();
-				WikiChange.start();
-			}
-			if(Config.httpdEnable.equals("true")) {
-				httpd.start();
-			}
-			scheduler = new TaskScheduler();
-			scheduler.start();
-
-			InputThread input = new InputThread();
-			input.start();
-			
+			Config.config.addListener(new LoogerHook());
 			bot = new PircBotX(Config.config.buildConfiguration());
 			bot.startBot();		
 		} catch (Exception ex) {
@@ -225,15 +117,14 @@ public class IRCBot {
 			Database.init();
 			Database.addStatement("CREATE TABLE IF NOT EXISTS Channels(name)");
 			Database.addStatement("CREATE TABLE IF NOT EXISTS Info(key PRIMARY KEY, data)");
-			Database.addStatement("CREATE TABLE IF NOT EXISTS OptionalHooks(hook, channel)");
 			//Channels
 			Database.addPreparedStatement("addChannel", "REPLACE INTO Channels (name) VALUES (?);");
 			Database.addPreparedStatement("removeChannel","DELETE FROM Channels WHERE name = ?;");
-			//Hooks
-			Database.addPreparedStatement("enableHook", "INSERT INTO OptionalHooks(hook, channel) VALUES (?, ?);");
-			Database.addPreparedStatement("disableHook","DELETE FROM OptionalHooks WHERE hook = ? AND channel = ?;");
-			Database.addPreparedStatement("checkHook","SELECT hook, channel FROM OptionalHooks WHERE hook = ?;");
-			Database.addPreparedStatement("checkHookForChan","SELECT hook FROM OptionalHooks WHERE hook = ? AND channel = ?;");
+			//Ops
+			Database.addStatement("CREATE TABLE IF NOT EXISTS Ops(name, level)");
+			Database.addPreparedStatement("removeOp","DELETE FROM Ops WHERE name = ?;");
+			Database.addPreparedStatement("addOp","REPLACE INTO Ops (name) VALUES (?);");
+			Database.addPreparedStatement("getOps", "SELECT name FROM ops;");
 			return true;
 	}
 
@@ -244,7 +135,7 @@ public class IRCBot {
 
 	private void loadOps() {
 		try {
-			ResultSet readOps = Database.getConnection().createStatement().executeQuery("SELECT name FROM ops;");
+			ResultSet readOps = Database.preparedStatements.get("getOps").executeQuery();
 			int rowCount = 0;
 			while (readOps.next()) {
 				rowCount++;
@@ -311,15 +202,54 @@ public class IRCBot {
 		return isDebug;
 	}
 
-	/**
-	 * Use Premissions.isOp
-	 * @param sourceBot
-	 * @param user
-	 * @return
-	 */
-	@Deprecated
 	public static boolean isOp(PircBotX sourceBot, User user) {
-		return Permissions.isOp(sourceBot, user);
+		long startTime = System.currentTimeMillis();
+		String nsRegistration = "";
+		if (IRCBot.getDebug())
+			System.out.println(Thread.currentThread().getStackTrace()[2].getClassName() +"#"+ Thread.currentThread().getStackTrace()[2].getMethodName());
+		if (Account.userCache.containsKey(user.getUserId()) && Account.userCache.get(user.getUserId()).getExpiration().after(Calendar.getInstance().getTime())) {
+			nsRegistration = Account.userCache.get(user.getUserId()).getValue();
+			Calendar future = Calendar.getInstance();
+			if (!IRCBot.getDebug()) {
+				System.out.println("Not Debugging setting cache to 10 hours");
+				future.add(Calendar.HOUR,10);
+			} else {
+				System.out.println("Debugging setting cache to 30 seconds");
+				future.add(Calendar.SECOND,30);
+			}
+			Account.userCache.put(user.getUserId(), new ExpiringToken(future.getTime(),nsRegistration));
+			IRCBot.log.debug(user.getNick() + " is cached");
+		} else {
+			IRCBot.log.debug(user.getNick() + " is NOT cached");
+			try {
+				sourceBot.sendRaw().rawLine("WHOIS " + user.getNick() + " " + user.getNick());
+				WaitForQueue waitForQueue = new WaitForQueue(sourceBot);
+				WhoisEvent whoisEvent = waitForQueue.waitFor(WhoisEvent.class);
+				waitForQueue.close();
+				if (whoisEvent.getRegisteredAs() != null) {
+					nsRegistration = whoisEvent.getRegisteredAs();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			if (!nsRegistration.isEmpty()) {
+				Calendar future = Calendar.getInstance();
+				if (!IRCBot.getDebug())
+					future.add(Calendar.MINUTE,10);
+				else
+					future.add(Calendar.SECOND,30);
+				Account.userCache.put(user.getUserId(), new ExpiringToken(future.getTime(),nsRegistration));
+				IRCBot.log.debug(user.getUserId().toString() + " added to cache: " + nsRegistration + " expires at " + future.getTime().toString());
+			}
+		}
+		long endTime = System.currentTimeMillis();
+		if (IRCBot.getDebug())
+			System.out.println("That took " + (endTime - startTime) + " milliseconds");
+		if (IRCBot.instance.getOps().contains(nsRegistration)) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
     public static File getThisJarFile() throws UnsupportedEncodingException

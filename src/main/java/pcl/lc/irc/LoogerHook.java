@@ -322,8 +322,10 @@ public class LoogerHook extends ListenerAdapter {
 		Date date = new Date();
 		String user;
 		String reason;
+		String hostmask;
 		for (Channel channel : IRCBot.bot.getUserChannelDao().getAllChannels()) {
 			user = event.getUserHostmask().getNick();
+			hostmask = event.getUserHostmask().getHostmask();
 			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 			Statement st;
 			try {
@@ -353,7 +355,7 @@ public class LoogerHook extends ListenerAdapter {
 				preparedStmt.setString (2, dateFormat2.format(date2));
 				preparedStmt.setString (3, channel.getName());
 				preparedStmt.setInt    (4, lineNum);
-				preparedStmt.setString (5, "*** Quits: " + user + " ("+reason+")");
+				preparedStmt.setString (5, "*** Quits: " + user + "("+hostmask+") ("+reason+")");
 
 				// execute the preparedstatement
 				preparedStmt.execute();

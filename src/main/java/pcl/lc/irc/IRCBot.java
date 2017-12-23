@@ -1,9 +1,7 @@
 package pcl.lc.irc;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.sql.*;
@@ -14,25 +12,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.pircbotx.PircBotX;
 import org.pircbotx.User;
-import org.pircbotx.hooks.Listener;
-import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.WaitForQueue;
 import org.pircbotx.hooks.events.WhoisEvent;
-import org.reflections.Reflections;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
-import com.wolfram.alpha.WAEngine;
-
 import pcl.lc.utils.Account;
 import pcl.lc.utils.Account.ExpiringToken;
 import pcl.lc.utils.Database;
 
 public class IRCBot {
+
+	public static Connection con;
 
 	private Connection connection = Database.getConnection();
 	public static IRCBot instance;
@@ -46,7 +44,7 @@ public class IRCBot {
 			return size() > MAX_MESSAGES;
 		}
 	};
-	
+
 	//Keep a list of invites recieved
 	public static HashMap<String, String> invites = new HashMap<String, String>();
 	//Keep a list of users, and what server they're connected from
@@ -81,9 +79,82 @@ public class IRCBot {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public IRCBot() {
+
+		Config.setConfig();	
+		try{  
+			Class.forName("com.mysql.jdbc.Driver");  
+			con=DriverManager.getConnection(  
+					Config.mysqlServer,Config.mysqlUser,Config.mysqlPass); 
+		} catch(Exception e){ System.out.println(e); } 
+
+		File dir = new File("logs");
+		File[] directoryListing = dir.listFiles();
+		PreparedStatement preparedStmt = null;
+		String query = " insert into logs (date, timestamp, channel, linenum, message)"
+				+ " values (?, ?, ?, ?, ?)";
+		try {
+			preparedStmt = IRCBot.con.prepareStatement(query);
+		} catch (SQLException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+//		if (directoryListing != null) {
+//			for (File child : directoryListing) {
+//				LineIterator it = null;
+//				try {
+//					it = FileUtils.lineIterator(child, "UTF-8");
+//				} catch (IOException e1) {
+//					// TODO Auto-generated catch block
+//					e1.printStackTrace();
+//				}
+//				System.out.println(child.getName());
+//				try {
+//					int lineNum = 1;
+//					while (it.hasNext()) {
+//						String line = it.nextLine();
+//						if (line.length()>0) {
+//							try {
+//								String re1=".*?";	// Non-greedy match on filler
+//								String re2="((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9])):(?:[0-5][0-9])(?::[0-5][0-9])?(?:\\s?(?:am|AM|pm|PM))?)";	// HourMinuteSec 1
+//
+//								Pattern p = Pattern.compile(re1+re2,Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+//								Matcher m = p.matcher(line);
+//								
+//								if (m.find()) {
+//									preparedStmt.setString (1, child.getName().replace(".log",""));
+//									preparedStmt.setString (2, m.group(1).toString());
+//									preparedStmt.setString (3, "#oc");
+//									preparedStmt.setInt    (4, lineNum);
+//									preparedStmt.setString (5, line.replace("["+m.group(1).toString()+"] ", "").replaceAll("[\\p{Cf}]", ""));
+//									// execute the preparedstatement
+//									//preparedStmt.execute();
+//									preparedStmt.addBatch();
+//									lineNum++;
+//								}
+//							} catch (SQLException e) {
+//								// TODO Auto-generated catch block
+//								e.printStackTrace();
+//							}
+//						}
+//					}
+//		            	try {
+//							preparedStmt.executeBatch();
+//						} catch (SQLException e) {
+//							// TODO Auto-generated catch block
+//							e.printStackTrace();
+//						}
+//				} finally {
+//					it.close();
+//				}
+//			}
+//		} else {
+//			// Handle the case where dir is not really a directory.
+//			// Checking dir.isDirectory() above would not be sufficient
+//			// to avoid race conditions with another process that deletes
+//			// directories.
+//		}
 		scanner = new Scanner(System.in);
 		instance = this;
-		Config.setConfig();	
 		try {
 			Class.forName("org.sqlite.JDBC");
 		} catch (ClassNotFoundException e) {
@@ -114,18 +185,18 @@ public class IRCBot {
 	}
 
 	private boolean initDatabase() throws SQLException {
-			Database.init();
-			Database.addStatement("CREATE TABLE IF NOT EXISTS Channels(name)");
-			Database.addStatement("CREATE TABLE IF NOT EXISTS Info(key PRIMARY KEY, data)");
-			//Channels
-			Database.addPreparedStatement("addChannel", "REPLACE INTO Channels (name) VALUES (?);");
-			Database.addPreparedStatement("removeChannel","DELETE FROM Channels WHERE name = ?;");
-			//Ops
-			Database.addStatement("CREATE TABLE IF NOT EXISTS Ops(name, level)");
-			Database.addPreparedStatement("removeOp","DELETE FROM Ops WHERE name = ?;");
-			Database.addPreparedStatement("addOp","REPLACE INTO Ops (name) VALUES (?);");
-			Database.addPreparedStatement("getOps", "SELECT name FROM ops;");
-			return true;
+		Database.init();
+		Database.addStatement("CREATE TABLE IF NOT EXISTS Channels(name)");
+		Database.addStatement("CREATE TABLE IF NOT EXISTS Info(key PRIMARY KEY, data)");
+		//Channels
+		Database.addPreparedStatement("addChannel", "REPLACE INTO Channels (name) VALUES (?);");
+		Database.addPreparedStatement("removeChannel","DELETE FROM Channels WHERE name = ?;");
+		//Ops
+		Database.addStatement("CREATE TABLE IF NOT EXISTS Ops(name, level)");
+		Database.addPreparedStatement("removeOp","DELETE FROM Ops WHERE name = ?;");
+		Database.addPreparedStatement("addOp","REPLACE INTO Ops (name) VALUES (?);");
+		Database.addPreparedStatement("getOps", "SELECT name FROM ops;");
+		return true;
 	}
 
 	@Deprecated
@@ -197,7 +268,7 @@ public class IRCBot {
 	public static void setDebug(boolean b) {
 		isDebug = b;
 	}
-	
+
 	public static boolean getDebug() {
 		return isDebug;
 	}
@@ -252,18 +323,18 @@ public class IRCBot {
 		}
 	}
 
-    public static File getThisJarFile() throws UnsupportedEncodingException
-    {
-      //Gets the path of the currently running Jar file
-        String path = IRCBot.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-        String decodedPath = URLDecoder.decode(path, "UTF-8");
+	public static File getThisJarFile() throws UnsupportedEncodingException
+	{
+		//Gets the path of the currently running Jar file
+		String path = IRCBot.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+		String decodedPath = URLDecoder.decode(path, "UTF-8");
 
-        //This is code especially written for running and testing this program in an IDE that doesn't compile to .jar when running.
-        if (!decodedPath.endsWith(".jar"))
-        {
-            return new File("LanteaBot.jar");
-        }
-        return new File(decodedPath);   //We use File so that when we send the path to the ProcessBuilder, we will be using the proper System path formatting.
-    }
-	
+		//This is code especially written for running and testing this program in an IDE that doesn't compile to .jar when running.
+		if (!decodedPath.endsWith(".jar"))
+		{
+			return new File("LanteaBot.jar");
+		}
+		return new File(decodedPath);   //We use File so that when we send the path to the ProcessBuilder, we will be using the proper System path formatting.
+	}
+
 }

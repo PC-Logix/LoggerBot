@@ -17,15 +17,6 @@ import org.pircbotx.hooks.events.NickChangeEvent;
 import org.pircbotx.hooks.events.QuitEvent;
 
 public class LoogerHook extends ListenerAdapter {
-	private Connection con;
-	public LoogerHook() {
-		System.out.println(System.getProperty("java.class.path"));
-		try{  
-			Class.forName("com.mysql.jdbc.Driver");  
-			con=DriverManager.getConnection(  
-					Config.mysqlServer,Config.mysqlUser,Config.mysqlPass);   
-		} catch(Exception e){ System.out.println(e); } 
-	}
 
 	@Override
 	public void onMessage(MessageEvent event) {
@@ -37,7 +28,7 @@ public class LoogerHook extends ListenerAdapter {
 		// create the java statement
 		Statement st;
 		try {
-			st = con.createStatement();
+			st = IRCBot.con.createStatement();
 
 			// execute the query, and get a java resultset
 			ResultSet rs = st.executeQuery(select);
@@ -60,7 +51,7 @@ public class LoogerHook extends ListenerAdapter {
 				+ " values (?, ?, ?, ?, ?)";
 		PreparedStatement preparedStmt;
 		try {
-			preparedStmt = con.prepareStatement(query);
+			preparedStmt = IRCBot.con.prepareStatement(query);
 			preparedStmt.setString (1, dateFormat.format(date));
 			preparedStmt.setString (2, dateFormat2.format(date2));
 			preparedStmt.setString (3, event.getChannel().getName());
@@ -85,7 +76,7 @@ public class LoogerHook extends ListenerAdapter {
 		// create the java statement
 		Statement st;
 		try {
-			st = con.createStatement();
+			st = IRCBot.con.createStatement();
 
 			// execute the query, and get a java resultset
 			ResultSet rs = st.executeQuery(select);
@@ -108,12 +99,12 @@ public class LoogerHook extends ListenerAdapter {
 				+ " values (?, ?, ?, ?, ?)";
 		PreparedStatement preparedStmt;
 		try {
-			preparedStmt = con.prepareStatement(query);
+			preparedStmt = IRCBot.con.prepareStatement(query);
 			preparedStmt.setString (1, dateFormat.format(date));
 			preparedStmt.setString (2, dateFormat2.format(date2));
 			preparedStmt.setString (3, event.getChannel().getName());
 			preparedStmt.setInt    (4, lineNum);
-			preparedStmt.setString (5, "* "+event.getUser().getNick()+" "+ event.getMessage());
+			preparedStmt.setString (5, "* "+event.getUser().getNick()+" "+ event.getMessage().replaceAll("[\\p{Cf}]", ""));
 
 			// execute the preparedstatement
 			preparedStmt.execute();
@@ -133,7 +124,7 @@ public class LoogerHook extends ListenerAdapter {
 		// create the java statement
 		Statement st;
 		try {
-			st = con.createStatement();
+			st = IRCBot.con.createStatement();
 
 			// execute the query, and get a java resultset
 			ResultSet rs = st.executeQuery(select);
@@ -156,7 +147,7 @@ public class LoogerHook extends ListenerAdapter {
 				+ " values (?, ?, ?, ?, ?)";
 		PreparedStatement preparedStmt;
 		try {
-			preparedStmt = con.prepareStatement(query);
+			preparedStmt = IRCBot.con.prepareStatement(query);
 			preparedStmt.setString (1, dateFormat.format(date));
 			preparedStmt.setString (2, dateFormat2.format(date2));
 			preparedStmt.setString (3, event.getChannel().getName());
@@ -184,7 +175,7 @@ public class LoogerHook extends ListenerAdapter {
 			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 			Statement st;
 			try {
-				st = con.createStatement();
+				st = IRCBot.con.createStatement();
 				ResultSet rs = st.executeQuery(select);
 				while (rs.next()) {
 					if (rs.getString("date").equals(dateFormat.format(date)))
@@ -202,7 +193,7 @@ public class LoogerHook extends ListenerAdapter {
 					+ " values (?, ?, ?, ?, ?)";
 			PreparedStatement preparedStmt;
 			try {
-				preparedStmt = con.prepareStatement(query);
+				preparedStmt = IRCBot.con.prepareStatement(query);
 				preparedStmt.setString (1, dateFormat.format(date));
 				preparedStmt.setString (2, dateFormat2.format(date2));
 				preparedStmt.setString (3, channel.getName());
@@ -229,7 +220,7 @@ public class LoogerHook extends ListenerAdapter {
 		// create the java statement
 		Statement st;
 		try {
-			st = con.createStatement();
+			st = IRCBot.con.createStatement();
 
 			// execute the query, and get a java resultset
 			ResultSet rs = st.executeQuery(select);
@@ -252,7 +243,7 @@ public class LoogerHook extends ListenerAdapter {
 				+ " values (?, ?, ?, ?, ?)";
 		PreparedStatement preparedStmt;
 		try {
-			preparedStmt = con.prepareStatement(query);
+			preparedStmt = IRCBot.con.prepareStatement(query);
 			preparedStmt.setString (1, dateFormat.format(date));
 			preparedStmt.setString (2, dateFormat2.format(date2));
 			preparedStmt.setString (3, event.getChannel().getName());
@@ -277,7 +268,7 @@ public class LoogerHook extends ListenerAdapter {
 		// create the java statement
 		Statement st;
 		try {
-			st = con.createStatement();
+			st = IRCBot.con.createStatement();
 
 			// execute the query, and get a java resultset
 			ResultSet rs = st.executeQuery(select);
@@ -300,7 +291,7 @@ public class LoogerHook extends ListenerAdapter {
 				+ " values (?, ?, ?, ?, ?)";
 		PreparedStatement preparedStmt;
 		try {
-			preparedStmt = con.prepareStatement(query);
+			preparedStmt = IRCBot.con.prepareStatement(query);
 			preparedStmt.setString (1, dateFormat.format(date));
 			preparedStmt.setString (2, dateFormat2.format(date2));
 			preparedStmt.setString (3, event.getChannel().getName());
@@ -329,7 +320,7 @@ public class LoogerHook extends ListenerAdapter {
 			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 			Statement st;
 			try {
-				st = con.createStatement();
+				st = IRCBot.con.createStatement();
 				ResultSet rs = st.executeQuery(select);
 				while (rs.next()) {
 					if (rs.getString("date").equals(dateFormat.format(date)))
@@ -350,7 +341,7 @@ public class LoogerHook extends ListenerAdapter {
 					+ " values (?, ?, ?, ?, ?)";
 			PreparedStatement preparedStmt;
 			try {
-				preparedStmt = con.prepareStatement(query);
+				preparedStmt = IRCBot.con.prepareStatement(query);
 				preparedStmt.setString (1, dateFormat.format(date));
 				preparedStmt.setString (2, dateFormat2.format(date2));
 				preparedStmt.setString (3, channel.getName());

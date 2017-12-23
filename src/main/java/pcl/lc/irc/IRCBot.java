@@ -171,6 +171,7 @@ public class IRCBot {
 		Database.updateDatabase();
 		try {
 			Config.config.addListener(new LoogerHook());
+			Config.config.addListener(new Commands());
 			bot = new PircBotX(Config.config.buildConfiguration());
 			bot.startBot();		
 		} catch (Exception ex) {

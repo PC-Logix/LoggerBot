@@ -13,6 +13,7 @@ import org.pircbotx.Configuration;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.pircbotx.Configuration.Builder;
 import org.pircbotx.cap.EnableCapHandler;
+import org.pircbotx.cap.SASLCapHandler;
 import org.pircbotx.cap.TLSCapHandler;
 
 import pcl.lc.utils.CommentedProperties;
@@ -110,7 +111,8 @@ public class Config {
 			Config.config.setAutoNickChange(true);
 			Config.config.setAutoSplitMessage(true);
 			if (!Config.nspass.isEmpty())
-				Config.config.setNickservPassword(Config.nspass);
+				Config.config.addCapHandler(new SASLCapHandler(Config.nsaccount, Config.nspass, true));
+				//Config.config.setNickservPassword(Config.nspass);
 
 
 			Config.config.addCapHandler(new EnableCapHandler("extended-join", true));

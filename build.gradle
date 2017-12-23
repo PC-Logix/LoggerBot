@@ -61,7 +61,7 @@ if (System.getenv().BUILD_NUMBER != null)
 else
 	ext.buildNumber = 0
 
-archivesBaseName = "LanteaBot"
+archivesBaseName = "LoggerBot"
 
 class Version {
     int major, minor, revision
@@ -111,14 +111,6 @@ task processVersion (type: Copy) {
             versionBuild: versionObj.getBuild()
     ])
 }
-task downloadMultipleFiles(type: Download) {
-    src([
-        'https://raw.githubusercontent.com/Vexatos/Selene/master/selene/lib/selene/init.lua',
-        'https://raw.githubusercontent.com/Vexatos/Selene/master/selene/lib/selene/parser.lua'
-    ])
-    dest "src/main/resources/jnlua/selene"
-}
-processVersion.dependsOn downloadMultipleFiles
 
 // tell the compileJava task to compile the filtered source 
 compileJava.source = sourceSets.filtered.java

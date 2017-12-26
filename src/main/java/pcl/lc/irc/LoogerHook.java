@@ -314,7 +314,7 @@ public class LoogerHook extends ListenerAdapter {
 		String user;
 		String reason;
 		String hostmask;
-		for (Channel channel : IRCBot.bot.getUserChannelDao().getAllChannels()) {
+		for (Channel channel : event.getUserChannelDaoSnapshot().getAllChannels()) {
 			user = event.getUserHostmask().getNick();
 			hostmask = event.getUserHostmask().getHostmask();
 			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";

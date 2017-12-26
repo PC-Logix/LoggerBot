@@ -1,7 +1,11 @@
 package pcl.lc.irc;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.sql.SQLException;
 
+import org.apache.commons.io.FilenameUtils;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.events.MessageEvent;
 
@@ -34,7 +38,26 @@ public class Commands extends ListenerAdapter {
 				Config.nick = event.getMessage().split("\\s+")[1];
 				Config.prop.setProperty("commandprefix", event.getMessage().split("\\s+")[1]);
 				Config.saveProps();
+			} else if (event.getMessage().startsWith(Config.commandprefix + "restart")) {
+				restart();
 			}
 		}
 	}
+	
+	public void restart() throws URISyntaxException, IOException, Exception {
+		relaunch();
+	}
+
+	private static void relaunch() throws InterruptedException, UnsupportedEncodingException {
+		String command = "/"+FilenameUtils.getPath(IRCBot.getThisJarFile().getAbsolutePath()) + "restart.sh";
+			Process p;
+			try {
+				p = Runtime.getRuntime().exec(command);
+			    p.waitFor();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+}
 }

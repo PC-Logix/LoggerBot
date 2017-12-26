@@ -39,7 +39,12 @@ public class Commands extends ListenerAdapter {
 				Config.prop.setProperty("commandprefix", event.getMessage().split("\\s+")[1]);
 				Config.saveProps();
 			} else if (event.getMessage().startsWith(Config.commandprefix + "restart")) {
-				restart();
+				try {
+					restart();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
 	}

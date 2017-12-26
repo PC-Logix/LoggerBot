@@ -6,12 +6,17 @@ import java.net.URLDecoder;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.pircbotx.PircBotX;
 import org.pircbotx.User;
 import org.pircbotx.hooks.WaitForQueue;
@@ -20,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import pcl.lc.utils.Account;
 import pcl.lc.utils.Account.ExpiringToken;
+import pcl.lc.utils.CaseInsensitiveMap;
 import pcl.lc.utils.Database;
 
 public class IRCBot {
@@ -38,7 +44,9 @@ public class IRCBot {
 			return size() > MAX_MESSAGES;
 		}
 	};
-
+    public static ReadWriteLock rwl;
+    public static Lock wl;
+	public static CaseInsensitiveMap<Collection<String>> channelNicks;
 	//Keep a list of invites recieved
 	public static HashMap<String, String> invites = new HashMap<String, String>();
 	//Keep a list of users, and what server they're connected from
@@ -80,18 +88,20 @@ public class IRCBot {
 			con=DriverManager.getConnection(  
 					Config.mysqlServer,Config.mysqlUser,Config.mysqlPass); 
 		} catch(Exception e){ System.out.println(e); } 
-
-		File dir = new File("logs");
-		File[] directoryListing = dir.listFiles();
-		PreparedStatement preparedStmt = null;
-		String query = " insert into logs (date, timestamp, channel, linenum, message)"
-				+ " values (?, ?, ?, ?, ?)";
-		try {
-			preparedStmt = IRCBot.con.prepareStatement(query);
-		} catch (SQLException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
+        rwl = new ReentrantReadWriteLock();
+        wl = rwl.writeLock();
+		channelNicks = new CaseInsensitiveMap<>();
+//		File dir = new File("logs");
+//		File[] directoryListing = dir.listFiles();
+//		PreparedStatement preparedStmt = null;
+//		String query = " insert into logs (date, timestamp, channel, linenum, message)"
+//				+ " values (?, ?, ?, ?, ?)";
+//		try {
+//			preparedStmt = IRCBot.con.prepareStatement(query);
+//		} catch (SQLException e2) {
+//			// TODO Auto-generated catch block
+//			e2.printStackTrace();
+//		}
 //		if (directoryListing != null) {
 //			for (File child : directoryListing) {
 //				LineIterator it = null;

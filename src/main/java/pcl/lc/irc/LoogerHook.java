@@ -1,8 +1,10 @@
 package pcl.lc.irc;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
@@ -113,7 +115,7 @@ public class LoogerHook extends ListenerAdapter {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public void onMode(ModeEvent event) {
 		int lineNum = 1;
@@ -161,18 +163,17 @@ public class LoogerHook extends ListenerAdapter {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public void onNickChange(NickChangeEvent event) {
 		int lineNum = 1;
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		Date date = new Date();
-		String oldNick;
-		String newNick;
-		for (Channel channel : IRCBot.bot.getUserChannelDao().getAllChannels()) {
-			oldNick = event.getOldNick();
-			newNick = event.getNewNick();
-			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
+		String oldNick = event.getOldNick();
+		String newNick = event.getNewNick();
+		String nick = event.getOldNick();
+		for (String channelName : IRCBot.channelNicks.keySet()) {
+			if (IRCBot.channelNicks.get(channelName).contains(nick)) {			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 			Statement st;
 			try {
 				st = IRCBot.con.createStatement();
@@ -196,7 +197,7 @@ public class LoogerHook extends ListenerAdapter {
 				preparedStmt = IRCBot.con.prepareStatement(query);
 				preparedStmt.setString (1, dateFormat.format(date));
 				preparedStmt.setString (2, dateFormat2.format(date2));
-				preparedStmt.setString (3, channel.getName());
+				preparedStmt.setString (3, channelName);
 				preparedStmt.setInt    (4, lineNum);
 				preparedStmt.setString (5, "*** " + oldNick + " is now known as "+ newNick);
 
@@ -206,10 +207,13 @@ public class LoogerHook extends ListenerAdapter {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}		
+			}
+			IRCBot.channelNicks.get(channelName).remove(nick);
+		}
+		updateNickList();
 	}
 
-	
+
 	@Override
 	public void onKick(KickEvent event) {
 		int lineNum = 1;
@@ -256,6 +260,7 @@ public class LoogerHook extends ListenerAdapter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		updateNickList(event.getChannel());
 	}
 
 	@Override
@@ -304,6 +309,7 @@ public class LoogerHook extends ListenerAdapter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		updateNickList(event.getChannel());
 	}
 
 	@Override
@@ -314,47 +320,82 @@ public class LoogerHook extends ListenerAdapter {
 		String user;
 		String reason;
 		String hostmask;
-		for (Channel channel : event.getUserChannelDaoSnapshot().getAllChannels()) {
-			user = event.getUserHostmask().getNick();
-			hostmask = event.getUserHostmask().getHostmask();
-			String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channel.getName()+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
-			Statement st;
-			try {
-				st = IRCBot.con.createStatement();
-				ResultSet rs = st.executeQuery(select);
-				while (rs.next()) {
-					if (rs.getString("date").equals(dateFormat.format(date)))
-						lineNum = rs.getInt("linenum") + 1;
-					else
-						lineNum = 1;
+		String nick = event.getUserHostmask().getNick();
+		for (String channelName : IRCBot.channelNicks.keySet()) {
+			if (IRCBot.channelNicks.get(channelName).contains(nick)) {
+				hostmask = event.getUserHostmask().getHostmask();
+				String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
+				Statement st;
+				try {
+					st = IRCBot.con.createStatement();
+					ResultSet rs = st.executeQuery(select);
+					while (rs.next()) {
+						if (rs.getString("date").equals(dateFormat.format(date)))
+							lineNum = rs.getInt("linenum") + 1;
+						else
+							lineNum = 1;
+					}
+				} catch (SQLException e1) {
+					e1.printStackTrace();
 				}
-			} catch (SQLException e1) {
-				e1.printStackTrace();
-			}
-			if (event.getReason() != null)
-				reason = event.getReason();
-			else
-				reason = "Client Quit";
-			DateFormat dateFormat2 = new SimpleDateFormat("HH:mm:ss");
-			Date date2 = new Date();
-			String query = " insert into logs (date, timestamp, channel, linenum, message)"
-					+ " values (?, ?, ?, ?, ?)";
-			PreparedStatement preparedStmt;
-			try {
-				preparedStmt = IRCBot.con.prepareStatement(query);
-				preparedStmt.setString (1, dateFormat.format(date));
-				preparedStmt.setString (2, dateFormat2.format(date2));
-				preparedStmt.setString (3, channel.getName());
-				preparedStmt.setInt    (4, lineNum);
-				preparedStmt.setString (5, "*** Quits: " + user + "("+hostmask+") ("+reason+")");
+				if (event.getReason() != null)
+					reason = event.getReason();
+				else
+					reason = "Client Quit";
+				DateFormat dateFormat2 = new SimpleDateFormat("HH:mm:ss");
+				Date date2 = new Date();
+				String query = " insert into logs (date, timestamp, channel, linenum, message)"
+						+ " values (?, ?, ?, ?, ?)";
+				PreparedStatement preparedStmt;
+				try {
+					preparedStmt = IRCBot.con.prepareStatement(query);
+					preparedStmt.setString (1, dateFormat.format(date));
+					preparedStmt.setString (2, dateFormat2.format(date2));
+					preparedStmt.setString (3, channelName);
+					preparedStmt.setInt    (4, lineNum);
+					preparedStmt.setString (5, "*** Quits: " + nick + "("+hostmask+") ("+reason+")");
 
-				// execute the preparedstatement
-				preparedStmt.execute();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+					// execute the preparedstatement
+					preparedStmt.execute();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
-		}		
+		}
+		updateNickList();
+	}
+
+	public void updateNickList() {
+		if (!IRCBot.bot.isConnected()) {
+			return;
+		}
+		for (Channel channel : IRCBot.bot.getUserChannelDao().getAllChannels()) {
+			this.updateNickList(channel);
+		}
+	}
+
+	public void updateNickList(Channel channel) {
+		if (!IRCBot.bot.isConnected()) {
+			return;
+		}
+		// Build current list of names in channel
+		ArrayList<String> users = new ArrayList<>();
+		for (org.pircbotx.User user : channel.getUsers()) {
+			//plugin.logDebug("N: " + user.getNick());
+			users.add(user.getNick());
+		}
+		try {
+			IRCBot.wl.tryLock(10, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException ex) {
+			return;
+		}
+		try {
+			String channelName = channel.getName();
+			IRCBot.channelNicks.put(channelName, users);
+		} finally {
+			IRCBot.wl.unlock();
+		}
 	}
 
 }

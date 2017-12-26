@@ -14,7 +14,7 @@ import pcl.lc.utils.Database;
 public class Commands extends ListenerAdapter {
 	@Override
 	public void onMessage(MessageEvent event) {
-		if (event.getMessage().startsWith(Config.commandprefix) || IRCBot.isOp(IRCBot.bot, event.getUser())) {
+		if (event.getMessage().startsWith(Config.commandprefix) && IRCBot.isOp(IRCBot.bot, event.getUser())) {
 			if (event.getMessage().startsWith(Config.commandprefix + "join")) {
 				IRCBot.bot.sendIRC().joinChannel(event.getMessage().split("\\s+")[1]);
 				try {

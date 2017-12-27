@@ -1,6 +1,7 @@
 package pcl.lc.irc;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.sql.*;
@@ -16,7 +17,11 @@ import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.pircbotx.PircBotX;
 import org.pircbotx.User;
 import org.pircbotx.hooks.WaitForQueue;
@@ -44,8 +49,8 @@ public class IRCBot {
 			return size() > MAX_MESSAGES;
 		}
 	};
-    public static ReadWriteLock rwl;
-    public static Lock wl;
+	public static ReadWriteLock rwl;
+	public static Lock wl;
 	public static CaseInsensitiveMap<Collection<String>> channelNicks;
 	//Keep a list of invites recieved
 	public static HashMap<String, String> invites = new HashMap<String, String>();
@@ -88,75 +93,85 @@ public class IRCBot {
 			con=DriverManager.getConnection(  
 					Config.mysqlServer,Config.mysqlUser,Config.mysqlPass); 
 		} catch(Exception e){ System.out.println(e); } 
-        rwl = new ReentrantReadWriteLock();
-        wl = rwl.writeLock();
+		rwl = new ReentrantReadWriteLock();
+		wl = rwl.writeLock();
 		channelNicks = new CaseInsensitiveMap<>();
-//		File dir = new File("logs");
-//		File[] directoryListing = dir.listFiles();
-//		PreparedStatement preparedStmt = null;
-//		String query = " insert into logs (date, timestamp, channel, linenum, message)"
-//				+ " values (?, ?, ?, ?, ?)";
-//		try {
-//			preparedStmt = IRCBot.con.prepareStatement(query);
-//		} catch (SQLException e2) {
-//			// TODO Auto-generated catch block
-//			e2.printStackTrace();
-//		}
-//		if (directoryListing != null) {
-//			for (File child : directoryListing) {
-//				LineIterator it = null;
-//				try {
-//					it = FileUtils.lineIterator(child, "UTF-8");
-//				} catch (IOException e1) {
-//					// TODO Auto-generated catch block
-//					e1.printStackTrace();
-//				}
-//				System.out.println(child.getName());
-//				try {
-//					int lineNum = 1;
-//					while (it.hasNext()) {
-//						String line = it.nextLine();
-//						if (line.length()>0) {
-//							try {
-//								String re1=".*?";	// Non-greedy match on filler
-//								String re2="((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9])):(?:[0-5][0-9])(?::[0-5][0-9])?(?:\\s?(?:am|AM|pm|PM))?)";	// HourMinuteSec 1
-//
-//								Pattern p = Pattern.compile(re1+re2,Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-//								Matcher m = p.matcher(line);
-//								
-//								if (m.find()) {
-//									preparedStmt.setString (1, child.getName().replace(".log",""));
-//									preparedStmt.setString (2, m.group(1).toString());
-//									preparedStmt.setString (3, "#oc");
-//									preparedStmt.setInt    (4, lineNum);
-//									preparedStmt.setString (5, line.replace("["+m.group(1).toString()+"] ", "").replaceAll("[\\p{Cf}]", ""));
-//									// execute the preparedstatement
-//									//preparedStmt.execute();
-//									preparedStmt.addBatch();
-//									lineNum++;
-//								}
-//							} catch (SQLException e) {
-//								// TODO Auto-generated catch block
-//								e.printStackTrace();
-//							}
-//						}
-//					}
-//		            	try {
-//							preparedStmt.executeBatch();
-//						} catch (SQLException e) {
-//							// TODO Auto-generated catch block
-//							e.printStackTrace();
-//						}
-//				} finally {
-//					it.close();
-//				}
-//			}
-//		} else {
-//			// Handle the case where dir is not really a directory.
-//			// Checking dir.isDirectory() above would not be sufficient
-//			// to avoid race conditions with another process that deletes
-//			// directories.
-//		}
+		File dir = new File("logs");
+		File[] directoryListing = dir.listFiles();
+		PreparedStatement preparedStmt = null;
+		String query = " insert into logs (date, timestamp, channel, linenum, message)"
+				+ " values (?, ?, ?, ?, ?)";
+		try {
+			preparedStmt = IRCBot.con.prepareStatement(query);
+		} catch (SQLException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		if (directoryListing != null) {
+			for (File child : directoryListing) {
+				if (child.isDirectory()) {
+					System.out.println(child.getName());
+					File[] directoryListing2 = child.listFiles();
+					if (directoryListing2 != null) {
+						for (File child2 : directoryListing2) {
+							LineIterator it = null;
+							try {
+								it = FileUtils.lineIterator(child2, "UTF-8");
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							try {
+								int lineNum = 1;
+								while (it.hasNext()) {
+									String line = it.nextLine();
+									if (line.length()>0) {
+										String tehLine = null;
+										try {
+											String re1=".*?";	// Non-greedy match on filler
+											String re2="((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9])):(?:[0-5][0-9])(?::[0-5][0-9])?(?:\\s?(?:am|AM|pm|PM))?)";	// HourMinuteSec 1
+
+											Pattern p = Pattern.compile(re1+re2,Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+											Matcher m = p.matcher(line);
+
+											if (m.find()) {
+												tehLine = line.replace("["+m.group(1).toString()+"] ", "").replaceAll("[\\p{Cf}]", "");
+												preparedStmt.setString (1, child2.getName().replace(".log",""));
+												preparedStmt.setString (2, m.group(1).toString());
+												preparedStmt.setString (3, child.getName());
+												preparedStmt.setInt    (4, lineNum);
+												preparedStmt.setString (5, tehLine);
+												// execute the preparedstatement
+												//preparedStmt.execute();
+												preparedStmt.addBatch();
+												lineNum++;
+											}
+										} catch (SQLException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										}
+									}
+								}
+								try {
+									preparedStmt.executeBatch();
+								} catch (SQLException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							} finally {
+								it.close();
+							}
+						}
+					}
+				}
+
+			}
+		} else {
+			// Handle the case where dir is not really a directory.
+			// Checking dir.isDirectory() above would not be sufficient
+			// to avoid race conditions with another process that deletes
+			// directories.
+		}
 		scanner = new Scanner(System.in);
 		instance = this;
 		try {

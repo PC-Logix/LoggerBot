@@ -353,7 +353,7 @@ public class LoogerHook extends ListenerAdapter {
 					preparedStmt.setString (2, dateFormat2.format(date2));
 					preparedStmt.setString (3, channelName);
 					preparedStmt.setInt    (4, lineNum);
-					preparedStmt.setString (5, "*** Quits: " + nick + "("+hostmask+") ("+reason+")");
+					preparedStmt.setString (5, "*** Quits: " + nick + " ("+hostmask+") ("+reason+")");
 
 					// execute the preparedstatement
 					preparedStmt.execute();

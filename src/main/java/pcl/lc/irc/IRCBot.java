@@ -195,7 +195,7 @@ public class IRCBot {
 		//Database.setDBVer(Database.DB_VER);
 		Database.updateDatabase();
 		try {
-			Config.config.addListener(new LoogerHook());
+			Config.config.addListener(new LoggerHook());
 			Config.config.addListener(new Commands());
 			bot = new PircBotX(Config.config.buildConfiguration());
 			bot.startBot();		

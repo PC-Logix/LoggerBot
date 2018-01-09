@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import org.joda.time.LocalDate;
 import org.pircbotx.Channel;
 import org.pircbotx.hooks.ListenerAdapter;
 import org.pircbotx.hooks.events.ActionEvent;
@@ -29,12 +30,22 @@ import com.google.common.collect.Multimap;
 public class LoggerHook extends ListenerAdapter {
 	private ScheduledFuture<?> executor;
 
+	private LocalDate lastCheck = null;
+
+	public boolean isNewDay() {
+	  LocalDate today = LocalDate.now();
+	  boolean ret = lastCheck == null || today.isAfter(lastCheck);
+	  lastCheck = today;
+	  return ret;
+	}
+	
 	public LoggerHook() {
 		ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
 		executor = ses.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run() {
 				try {
+					if (isNewDay()) { numLines.clear(); }
 					if (!chanLines.isEmpty()) {
 						for (String channelName : chanLines.keys()) {
 							Collection<PreparedStatement> stmtItr = chanLines.get(channelName);
@@ -43,7 +54,6 @@ public class LoggerHook extends ListenerAdapter {
 								PreparedStatement stmt = iter.next();
 								DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 								Date date = new Date();
-								int lineNum = 1;
 								String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 								// create the java statement
 								Statement st;

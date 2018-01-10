@@ -85,7 +85,7 @@ public class LoggerHook extends ListenerAdapter {
 				} catch (Exception e){
 					//Just eat the error it's a java.util.ConcurrentModificationException
 					//and frankly I don't care right now.
-					//System.out.println("It's dead jim " + e.getClass());
+					System.out.println("It's dead jim " + e.getClass());
 				}
 			}
 		}, 0, 500, TimeUnit.MILLISECONDS);

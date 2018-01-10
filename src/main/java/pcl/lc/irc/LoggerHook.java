@@ -54,7 +54,7 @@ public class LoggerHook extends ListenerAdapter {
 								PreparedStatement stmt = iter.next();
 								DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 								Date date = new Date();
-								String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
+								String select = "SELECT COUNT(`linenum`) as `total`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum`;";
 								// create the java statement
 								Statement st;
 									try {
@@ -64,7 +64,7 @@ public class LoggerHook extends ListenerAdapter {
 										// iterate through the java resultset
 										while (rs.next()) {
 											if (rs.getString("date").equals(dateFormat.format(date)))
-												lineNum = rs.getInt("linenum") + 1;
+												lineNum = rs.getInt("total") + 1;
 											else
 												lineNum = 1;
 										}

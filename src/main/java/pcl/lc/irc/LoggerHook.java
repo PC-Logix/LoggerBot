@@ -45,19 +45,18 @@ public class LoggerHook extends ListenerAdapter {
 			@Override
 			public void run() {
 				try {
-					if (isNewDay()) { numLines.clear(); }
 					if (!chanLines.isEmpty()) {
 						for (String channelName : chanLines.keys()) {
 							Collection<PreparedStatement> stmtItr = chanLines.get(channelName);
 							Iterator<PreparedStatement> iter = stmtItr.iterator();
 							while (iter.hasNext()) {
+								Integer lineNum = 1;
 								PreparedStatement stmt = iter.next();
 								DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 								Date date = new Date();
 								String select = "SELECT `linenum`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum` DESC LIMIT 1;";
 								// create the java statement
 								Statement st;
-								if (!numLines.containsKey(channelName)) {
 									try {
 										st = IRCBot.con.createStatement();
 										// execute the query, and get a java resultset
@@ -65,17 +64,14 @@ public class LoggerHook extends ListenerAdapter {
 										// iterate through the java resultset
 										while (rs.next()) {
 											if (rs.getString("date").equals(dateFormat.format(date)))
-												numLines.put(channelName,rs.getInt("linenum") + 1);
+												lineNum = rs.getInt("linenum") + 1;
 											else
-												numLines.put(channelName,1);
+												lineNum = 1;
 										}
 									} catch (SQLException ex) {
 										throw new RuntimeException(ex);  // maybe create a new exception type?
 									}
-								} else {
-									numLines.put(channelName,numLines.get(channelName) + 1);
-								}
-								stmt.setInt    (4, numLines.get(channelName));
+								stmt.setInt    (4, lineNum);
 								stmt.execute();
 								if (chanLines.containsEntry(channelName, stmt))
 									chanLines.remove(channelName, stmt);
@@ -91,7 +87,6 @@ public class LoggerHook extends ListenerAdapter {
 		}, 0, 500, TimeUnit.MILLISECONDS);
 	}
 	public Multimap<String, PreparedStatement> chanLines = ArrayListMultimap.create();
-	public HashMap<String, Integer> numLines = new HashMap<String, Integer>();
 
 	@Override
 	public void onMessage(MessageEvent event) {

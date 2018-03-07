@@ -63,12 +63,14 @@ public class LoggerHook extends ListenerAdapter {
 										ResultSet rs = st.executeQuery(select);
 										// iterate through the java resultset
 										while (rs.next()) {
-											if (rs.getString("date").equals(dateFormat.format(date)))
+											if (rs.getString("date") != null && rs.getString("date").equals(dateFormat.format(date))) {
 												lineNum = rs.getInt("total") + 1;
-											else
+										} else {
 												lineNum = 1;
+											}
 										}
 									} catch (SQLException ex) {
+										ex.printStackTrace();
 										throw new RuntimeException(ex);  // maybe create a new exception type?
 									}
 								stmt.setInt    (4, lineNum);
@@ -81,7 +83,8 @@ public class LoggerHook extends ListenerAdapter {
 				} catch (Exception e){
 					//Just eat the error it's a java.util.ConcurrentModificationException
 					//and frankly I don't care right now.
-					System.out.println("It's dead jim " + e.getClass());
+					//e.printStackTrace();
+					//System.out.println("It's dead jim " + e.getClass());
 				}
 			}
 		}, 0, 500, TimeUnit.MILLISECONDS);

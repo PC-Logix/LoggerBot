@@ -22,6 +22,7 @@ import org.pircbotx.hooks.events.KickEvent;
 import org.pircbotx.hooks.events.MessageEvent;
 import org.pircbotx.hooks.events.ModeEvent;
 import org.pircbotx.hooks.events.NickChangeEvent;
+import org.pircbotx.hooks.events.PartEvent;
 import org.pircbotx.hooks.events.QuitEvent;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -104,6 +105,19 @@ public class LoggerHook extends ListenerAdapter {
 	@Override
 	public void onMode(ModeEvent event) {
 		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" sets mode: "+ event.getMode());
+	}
+	
+	@Override
+	public void onPart(PartEvent event) {
+		String reason;
+		String hostmask;
+		hostmask = event.getUserHostmask().getHostmask();
+		if (event.getReason() != null)
+			reason = event.getReason();
+		else
+			reason = "Client Left";
+
+		updateDB(event.getChannel().getName(), "*** Parts: "+event.getUser().getNick()+" ("+hostmask+") ("+reason+")");
 	}
 
 	@Override

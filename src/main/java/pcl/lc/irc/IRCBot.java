@@ -108,6 +108,7 @@ public class IRCBot {
 			e2.printStackTrace();
 		}
 		if (directoryListing != null) {
+			System.out.println("Running log importer");
 			for (File child : directoryListing) {
 				if (child.isDirectory()) {
 					System.out.println(child.getName());
@@ -167,6 +168,7 @@ public class IRCBot {
 
 			}
 		} else {
+			System.out.println("directoryListing was null");
 			// Handle the case where dir is not really a directory.
 			// Checking dir.isDirectory() above would not be sufficient
 			// to avoid race conditions with another process that deletes

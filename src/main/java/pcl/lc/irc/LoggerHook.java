@@ -110,16 +110,17 @@ public class LoggerHook extends ListenerAdapter {
 	@Override
 	public void onPart(PartEvent event) {
 		String reason;
-		String hostmask;
+		String hostmask = event.getUserHostmask().getHostmask();
 		String nick = event.getUserHostmask().getNick();
-		hostmask = event.getUserHostmask().getHostmask();
 		if (event.getReason() != null) {
 			reason = event.getReason();
 		} else {
 			reason = "User Left";
 		}
-		System.out.println("*** Parts: "+nick+" ("+hostmask+") ("+reason+")");
+
 		updateDB(event.getChannel().getName(), "*** Parts: "+nick+" ("+hostmask+") ("+reason+")");
+
+		updateNickList();
 	}
 
 	@Override

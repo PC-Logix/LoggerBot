@@ -35,12 +35,12 @@ public class LoggerHook extends ListenerAdapter {
 	private LocalDate lastCheck = null;
 
 	public boolean isNewDay() {
-	  LocalDate today = LocalDate.now();
-	  boolean ret = lastCheck == null || today.isAfter(lastCheck);
-	  lastCheck = today;
-	  return ret;
+		LocalDate today = LocalDate.now();
+		boolean ret = lastCheck == null || today.isAfter(lastCheck);
+		lastCheck = today;
+		return ret;
 	}
-	
+
 	public LoggerHook() {
 		ScheduledExecutorService ses = Executors.newSingleThreadScheduledExecutor();
 		executor = ses.scheduleAtFixedRate(new Runnable() {
@@ -59,22 +59,22 @@ public class LoggerHook extends ListenerAdapter {
 								String select = "SELECT COUNT(`linenum`) as `total`,`date` FROM `logs` WHERE `channel`='"+channelName+"' AND `date`='"+dateFormat.format(date)+"' ORDER BY `linenum`;";
 								// create the java statement
 								Statement st;
-									try {
-										st = IRCBot.con.createStatement();
-										// execute the query, and get a java resultset
-										ResultSet rs = st.executeQuery(select);
-										// iterate through the java resultset
-										while (rs.next()) {
-											if (rs.getString("date") != null && rs.getString("date").equals(dateFormat.format(date))) {
-												lineNum = rs.getInt("total") + 1;
+								try {
+									st = IRCBot.con.createStatement();
+									// execute the query, and get a java resultset
+									ResultSet rs = st.executeQuery(select);
+									// iterate through the java resultset
+									while (rs.next()) {
+										if (rs.getString("date") != null && rs.getString("date").equals(dateFormat.format(date))) {
+											lineNum = rs.getInt("total") + 1;
 										} else {
-												lineNum = 1;
-											}
+											lineNum = 1;
 										}
-									} catch (SQLException ex) {
-										ex.printStackTrace();
-										throw new RuntimeException(ex);  // maybe create a new exception type?
 									}
+								} catch (SQLException ex) {
+									ex.printStackTrace();
+									throw new RuntimeException(ex);  // maybe create a new exception type?
+								}
 								stmt.setInt    (4, lineNum);
 								stmt.execute();
 								if (chanLines.containsEntry(channelName, stmt))
@@ -107,12 +107,14 @@ public class LoggerHook extends ListenerAdapter {
 	public void onMode(ModeEvent event) {
 		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" sets mode: "+ event.getMode());
 	}
-	
+
 	@Override
 	public void onTopic(TopicEvent event) {
-		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" changes topic to "+ event.getTopic());
+		if (event.isChanged()) {
+			updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" changes topic to "+ event.getTopic());
+		}
 	}
-	
+
 	@Override
 	public void onPart(PartEvent event) {
 		String reason;

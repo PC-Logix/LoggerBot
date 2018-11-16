@@ -110,7 +110,7 @@ public class LoggerHook extends ListenerAdapter {
 	
 	@Override
 	public void onTopic(TopicEvent event) {
-		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" changes topic to "+ event.getTopic()());
+		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" changes topic to "+ event.getTopic());
 	}
 	
 	@Override

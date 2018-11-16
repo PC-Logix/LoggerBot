@@ -24,6 +24,7 @@ import org.pircbotx.hooks.events.ModeEvent;
 import org.pircbotx.hooks.events.NickChangeEvent;
 import org.pircbotx.hooks.events.PartEvent;
 import org.pircbotx.hooks.events.QuitEvent;
+import org.pircbotx.hooks.events.TopicEvent;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -105,6 +106,11 @@ public class LoggerHook extends ListenerAdapter {
 	@Override
 	public void onMode(ModeEvent event) {
 		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" sets mode: "+ event.getMode());
+	}
+	
+	@Override
+	public void onTopic(TopicEvent event) {
+		updateDB(event.getChannel().getName(), "*** "+event.getUser().getNick()+" changes topic to "+ event.getTopic()());
 	}
 	
 	@Override
